@@ -30,6 +30,7 @@ jobs:
       - name: Install depot_tools (gn)
         run: |
           git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$RUNNER_TEMP/depot_tools"
+          "$RUNNER_TEMP/depot_tools/ensure_bootstrap"
           echo "$RUNNER_TEMP/depot_tools" >> "$GITHUB_PATH"
 
       - name: Clone google/skia (shallow)
