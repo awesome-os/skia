@@ -6,6 +6,8 @@ import {
   SKIA_CAS_GN_PATH,
   fetchCasIndex,
   loadSkiaGnArgs,
+  renderSkiaFrameToAnsiHalfBlocks,
+  renderSkiaFrameToKittyProtocol,
   resolveSkiaPlan,
 } from '../src/index.mts';
 import type { CasIndex } from '../src/index.mts';
@@ -108,4 +110,18 @@ test('resolveSkiaPlan handles pending vs resolved libskia deterministically', ()
   assert.equal(resolvedPlan.skiaReady, true);
   assert.equal(resolvedPlan.shards.libskia.status, 'resolved');
   assert.equal(resolvedPlan.shards.libskia.entry?.sha256, 'c'.repeat(64));
+});
+
+test('Skia RGBA framebuffer renders cleanly to TTY ANSI half-blocks and Kitty Graphics Protocol', () => {
+  const rgba = new Uint8Array([
+    255, 0, 0, 255,   0, 255, 0, 255,
+    0, 0, 255, 255,   255, 255, 255, 255,
+  ]);
+  const ansi = renderSkiaFrameToAnsiHalfBlocks({ width: 2, height: 2, rgba });
+  assert.ok(ansi.includes('\x1b[38;2;255;0;0;48;2;0;0;255m\u2580'));
+  assert.ok(ansi.endsWith('\x1b[0m'));
+
+  const kitty = renderSkiaFrameToKittyProtocol({ width: 2, height: 2, rgba });
+  assert.ok(kitty.startsWith('\x1b_Ga=T,f=32,s=2,v=2,m=0;'));
+  assert.ok(kitty.endsWith('\x1b\\'));
 });

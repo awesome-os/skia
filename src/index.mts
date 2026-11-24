@@ -24,6 +24,12 @@ export type {
   SkiaTarget,
 } from './hydrate.mts';
 
+export {
+  renderSkiaFrameToAnsiHalfBlocks,
+  renderSkiaFrameToKittyProtocol,
+  type SkiaRgbaFrame,
+} from './kitty-ascii-sink.mts';
+
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
 export const SKIA_CAS_GN_PATH = join(MODULE_DIR, '..', 'config', 'skia-cas.gn');
