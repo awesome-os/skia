@@ -14,12 +14,36 @@ permissions:
   contents: write
 
 jobs:
-  build-libskia-linux-x64:
-    runs-on: ubuntu-latest
+  build:
+    name: Build Skia (${{ matrix.target }})
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runs_on: ubuntu-latest
+            os: linux
+            artifact: libskia-linux-x64.so
+          - target: linux-arm64
+            runs_on: ubuntu-24.04-arm
+            os: linux
+            artifact: libskia-linux-arm64.so
+          - target: windows-x64
+            runs_on: windows-latest
+            os: windows
+            artifact: skia-windows-x64.dll
+          - target: macos-arm64
+            runs_on: macos-latest
+            os: macos
+            artifact: libskia-macos-arm64.dylib
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Install build dependencies (Linux)
+        if: matrix.os == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -28,19 +52,51 @@ jobs:
             libgl1-mesa-dev libglu1-mesa-dev libicu-dev libjpeg-dev libpng-dev zlib1g-dev \
             libx11-dev libx11-xcb-dev libxcb1-dev libwayland-dev libvulkan-dev
 
-      - name: Install depot_tools (gn)
+      - name: Setup MSVC environment (Windows)
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install build dependencies (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            choco install -y ninja
+          }
+
+      - name: Install build dependencies (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          brew install ninja expat webp harfbuzz libpng libjpeg-turbo icu4c
+
+      - name: Install depot_tools (gn) (Linux/macOS)
+        if: matrix.os != 'windows'
         run: |
           git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$RUNNER_TEMP/depot_tools"
           "$RUNNER_TEMP/depot_tools/ensure_bootstrap"
           echo "$RUNNER_TEMP/depot_tools" >> "$GITHUB_PATH"
 
-      - name: Clone google/skia (shallow)
+      - name: Clone google/skia (shallow) (Linux/macOS)
+        if: matrix.os != 'windows'
         run: |
           git clone --depth=1 --branch "${{ inputs.skia_ref || 'main' }}" https://github.com/google/skia.git "$RUNNER_TEMP/skia"
           cd "$RUNNER_TEMP/skia"
           python3 tools/git-sync-deps
 
-      - name: Configure and build standalone libskia.so
+      - name: Clone google/skia (shallow) (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $ref = if ("${{ inputs.skia_ref }}") { "${{ inputs.skia_ref }}" } else { "main" }
+          git clone --depth=1 --branch $ref https://github.com/google/skia.git "$env:RUNNER_TEMP\skia"
+          Set-Location "$env:RUNNER_TEMP\skia"
+          python3 tools/git-sync-deps
+          python3 bin/fetch-gn
+
+      - name: Configure and build standalone libskia.so (Linux)
+        if: matrix.os == 'linux'
         run: |
           mkdir -p "$RUNNER_TEMP/skia/out/cas"
           cp "${{ github.workspace }}/config/skia-cas.gn" "$RUNNER_TEMP/skia/out/cas/args.gn"
@@ -49,13 +105,101 @@ jobs:
           gn gen out/cas
           ninja -C out/cas skia
           mkdir -p "${{ github.workspace }}/dist"
-          cp out/cas/libskia.so "${{ github.workspace }}/dist/libskia-linux-x64.so"
-          sha256sum "${{ github.workspace }}/dist/libskia-linux-x64.so" > "${{ github.workspace }}/dist/libskia-linux-x64.so.sha256"
+          cp out/cas/libskia.so "${{ github.workspace }}/dist/${{ matrix.artifact }}"
+          sha256sum "${{ github.workspace }}/dist/${{ matrix.artifact }}" > "${{ github.workspace }}/dist/${{ matrix.artifact }}.sha256"
+          sha512sum "${{ github.workspace }}/dist/${{ matrix.artifact }}" > "${{ github.workspace }}/dist/${{ matrix.artifact }}.sha512"
 
-      - name: Publish libskia-linux-x64.so release asset
+      - name: Configure and build standalone libskia.dylib (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          BREW_PREFIX="$(brew --prefix)"
+          mkdir -p "$RUNNER_TEMP/skia/out/cas"
+          cp "${{ github.workspace }}/config/skia-cas.gn" "$RUNNER_TEMP/skia/out/cas/args.gn"
+          cat <<EOF >> "$RUNNER_TEMP/skia/out/cas/args.gn"
+
+          target_cpu = "arm64"
+          skia_use_metal = true
+          extra_cflags = ["-I${BREW_PREFIX}/include"]
+          extra_ldflags = ["-L${BREW_PREFIX}/lib"]
+          EOF
+          cd "$RUNNER_TEMP/skia"
+          gn gen out/cas
+          ninja -C out/cas skia
+          mkdir -p "${{ github.workspace }}/dist"
+          cp out/cas/libskia.dylib "${{ github.workspace }}/dist/${{ matrix.artifact }}"
+          shasum -a 256 "${{ github.workspace }}/dist/${{ matrix.artifact }}" > "${{ github.workspace }}/dist/${{ matrix.artifact }}.sha256"
+          shasum -a 512 "${{ github.workspace }}/dist/${{ matrix.artifact }}" > "${{ github.workspace }}/dist/${{ matrix.artifact }}.sha512"
+
+      - name: Configure and build standalone skia.dll (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $skiaDir = "$env:RUNNER_TEMP\skia"
+          $outDir = "$skiaDir\out\cas"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          Copy-Item "${{ github.workspace }}\config\skia-cas.gn" "$outDir\args.gn" -Force
+          @"
+
+          target_cpu = "x64"
+          clang_win = "C:\Program Files\LLVM"
+          skia_use_system_expat = false
+          skia_use_system_libwebp = false
+          "@ | Add-Content -Path "$outDir\args.gn"
+          Set-Location $skiaDir
+          & "$skiaDir\bin\gn.exe" gen out/cas
+          ninja -C out/cas skia
+          $distDir = "${{ github.workspace }}\dist"
+          New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+          $outPath = "$distDir\${{ matrix.artifact }}"
+          Copy-Item "out\cas\skia.dll" $outPath -Force
+          $sha256 = (Get-FileHash -Algorithm SHA256 -Path $outPath).Hash.ToLowerInvariant()
+          $sha512 = (Get-FileHash -Algorithm SHA512 -Path $outPath).Hash.ToLowerInvariant()
+          "$sha256  ${{ matrix.artifact }}" | Out-File -Encoding ascii -NoNewline "$outPath.sha256"
+          "$sha512  ${{ matrix.artifact }}" | Out-File -Encoding ascii -NoNewline "$outPath.sha512"
+
+      - name: Upload Skia shared library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skia-cas-${{ matrix.target }}
+          path: dist/*
+          retention-days: 14
+
+  publish:
+    name: Publish Skia CAS Release
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all Skia CAS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: skia-cas-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate SHA256SUMS.txt and SHA512SUMS.txt
+        run: |
+          cd dist
+          shopt -s nullglob
+          FILES=(*.so *.dll *.dylib)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No Skia CAS binaries found to publish."
+            exit 1
+          fi
+          IFS=$'\n' SORTED=($(printf '%s\n' "${FILES[@]}" | LC_ALL=C sort))
+          unset IFS
+          sha256sum "${SORTED[@]}" > SHA256SUMS.txt
+          sha512sum "${SORTED[@]}" > SHA512SUMS.txt
+          cat SHA256SUMS.txt
+          ls -lh
+
+      - name: Publish Skia CAS release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="skia-cas-$(date -u +%Y%m%d)"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Skia CAS $TAG" --notes "Standalone libskia-linux-x64.so built with config/skia-cas.gn"
-          gh release upload "$TAG" dist/libskia-linux-x64.so dist/libskia-linux-x64.so.sha256 --clobber
+          gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "Skia CAS $TAG" \
+            --notes "Standalone Skia CAS shards (linux-x64, linux-arm64, windows-x64, macos-arm64) built with config/skia-cas.gn"
+          gh release upload "$TAG" dist/* --repo "${{ github.repository }}" --clobber
