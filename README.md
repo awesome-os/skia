@@ -2,6 +2,30 @@
 
 Standalone **Skia 2D/GPU graphics shard** (BSD-3-Clause) wired to the Awesome-OS [`b8g-ghost` `cas-v1`](https://github.com/awesome-os/b8g-ghost/releases/tag/cas-v1) content-addressed artifact store for **Sectium Display**, **Blink**, and **libelectron**.
 
+## Quick Install & Usage
+
+### Install via `pnpm` (or release tarball)
+
+```powershell
+pnpm add github:awesome-os/skia
+```
+
+Or download the latest SHA-256 verified archive from [`Releases`](https://github.com/awesome-os/skia/releases/latest).
+
+### Usage & Verification
+
+```ts
+import { fetchCasIndex, resolveSkiaPlan, hydrateSkiaShards } from '@awesome-os/skia';
+
+const plan = resolveSkiaPlan(await fetchCasIndex(), 'linux-x64');
+console.log(plan.prerequisitesReady, plan.shards.libskia.status);
+```
+
+```powershell
+# Verify locally (Node.js 22+)
+node --test
+```
+
 ## Architecture
 
 Instead of bundling or recompiling vendored C/C++ third-party dependencies inside every Chromium/Electron/Sectium build, `@awesome-os/skia` splits Skia into a standalone shared component (`libskia`) backed by immutable SHA-256 shards in `awesome-os/b8g-ghost@cas-v1`:
