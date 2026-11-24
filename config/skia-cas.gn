@@ -1,0 +1,14 @@
+# Standalone Skia 2D/GPU component build wired to Awesome-OS b8g-ghost cas-v1
+# Prerequisite C shards (libexpat, libwebp) and ghost-llvm are hydrated from cas-v1.
+
+is_component_build = true
+is_official_build = true
+skia_enable_tools = false
+
+# Use system/CAS-hydrated C libraries rather than vendored third_party copies
+skia_use_system_expat = true
+skia_use_system_libwebp = true
+
+# GPU + WebGPU (Dawn) backend for Sectium Display, Blink, and libelectron
+skia_enable_gpu = true
+skia_use_dawn = true

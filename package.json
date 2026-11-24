@@ -1,0 +1,40 @@
+{
+  "name": "@awesome-os/skia",
+  "version": "0.1.0",
+  "description": "Standalone Skia 2D/GPU graphics shard (BSD-3) wired to Awesome-OS b8g-ghost cas-v1 (libwebp, libexpat, ghost-llvm) for Sectium Display, Blink, and libelectron",
+  "type": "module",
+  "license": "BSD-3-Clause",
+  "main": "./src/index.mts",
+  "module": "./src/index.mts",
+  "types": "./src/index.mts",
+  "exports": {
+    ".": "./src/index.mts",
+    "./hydrate": "./src/hydrate.mts"
+  },
+  "files": [
+    "src/",
+    "config/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test test/skia-cas.test.mts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awesome-os/skia.git"
+  },
+  "keywords": [
+    "skia",
+    "graphics",
+    "gpu",
+    "dawn",
+    "sectium",
+    "awesome-os",
+    "b8g-ghost",
+    "cas-v1"
+  ]
+}

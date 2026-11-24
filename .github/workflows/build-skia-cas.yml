@@ -1,0 +1,59 @@
+name: Build Standalone Skia CAS Shard
+
+on:
+  workflow_dispatch:
+    inputs:
+      skia_ref:
+        description: 'Upstream google/skia branch or tag to build'
+        required: false
+        default: 'main'
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: write
+
+jobs:
+  build-libskia-linux-x64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang lld ninja-build python3 git ca-certificates \
+            libexpat1-dev libwebp-dev libfontconfig1-dev libfreetype6-dev \
+            libgl1-mesa-dev libglu1-mesa-dev libicu-dev libjpeg-dev libpng-dev zlib1g-dev
+
+      - name: Install depot_tools (gn)
+        run: |
+          git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$RUNNER_TEMP/depot_tools"
+          echo "$RUNNER_TEMP/depot_tools" >> "$GITHUB_PATH"
+
+      - name: Clone google/skia (shallow)
+        run: |
+          git clone --depth=1 --branch "${{ inputs.skia_ref || 'main' }}" https://github.com/google/skia.git "$RUNNER_TEMP/skia"
+          cd "$RUNNER_TEMP/skia"
+          python3 tools/git-sync-deps
+
+      - name: Configure and build standalone libskia.so
+        run: |
+          mkdir -p "$RUNNER_TEMP/skia/out/cas"
+          cp "${{ github.workspace }}/config/skia-cas.gn" "$RUNNER_TEMP/skia/out/cas/args.gn"
+          printf '\ncc = "clang"\ncxx = "clang++"\n' >> "$RUNNER_TEMP/skia/out/cas/args.gn"
+          cd "$RUNNER_TEMP/skia"
+          gn gen out/cas
+          ninja -C out/cas skia
+          mkdir -p "${{ github.workspace }}/dist"
+          cp out/cas/libskia.so "${{ github.workspace }}/dist/libskia-linux-x64.so"
+          sha256sum "${{ github.workspace }}/dist/libskia-linux-x64.so" > "${{ github.workspace }}/dist/libskia-linux-x64.so.sha256"
+
+      - name: Publish libskia-linux-x64.so release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="skia-cas-$(date -u +%Y%m%d)"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Skia CAS $TAG" --notes "Standalone libskia-linux-x64.so built with config/skia-cas.gn"
+          gh release upload "$TAG" dist/libskia-linux-x64.so dist/libskia-linux-x64.so.sha256 --clobber
