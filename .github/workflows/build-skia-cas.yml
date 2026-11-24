@@ -25,7 +25,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             clang lld ninja-build python3 git ca-certificates \
             libexpat1-dev libwebp-dev libfontconfig1-dev libfreetype6-dev \
-            libgl1-mesa-dev libglu1-mesa-dev libicu-dev libjpeg-dev libpng-dev zlib1g-dev
+            libgl1-mesa-dev libglu1-mesa-dev libicu-dev libjpeg-dev libpng-dev zlib1g-dev \
+            libx11-dev libx11-xcb-dev libxcb1-dev libwayland-dev libvulkan-dev
 
       - name: Install depot_tools (gn)
         run: |
