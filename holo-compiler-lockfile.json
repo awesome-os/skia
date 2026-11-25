@@ -1,0 +1,36 @@
+{
+  "schema": "holo-compiler-lockfile-v1",
+  "abiMagic": "0x33564742",
+  "casLayout": "v11",
+  "repo": "awesome-os/skia",
+  "targets": [
+    "linux-x64"
+  ],
+  "generatedAt": "2026-11-24T23:53:02.473Z",
+  "dependencies": [
+    {
+      "id": "awesome-os/skia/libskia-linux-x64.so",
+      "kind": "lib",
+      "version": "skia-cas-20261124",
+      "target": "linux-x64",
+      "sha512": "cf0d2c29a7df273bc9bec36dc1650c9da96c2e04f5711abe45599c8f76b501f3780dfbe9c95d6c5a0ecda0068f56059714d66d160d6c16472ab52da4991e09b2",
+      "size": 10484368,
+      "executable": false,
+      "blob": "v11/files/cf/cf0d2c29a7df273bc9bec36dc1650c9da96c2e04f5711abe45599c8f76b501f3780dfbe9c95d6c5a0ecda0068f56059714d66d160d6c16472ab52da4991e09b2",
+      "url": "https://github.com/awesome-os/skia/releases/download/skia-cas-20261124/libskia-linux-x64.so",
+      "dependencies": []
+    },
+    {
+      "id": "awesome-os/skia/libskia-linux-x64.so.sha256",
+      "kind": "object",
+      "version": "skia-cas-20261124",
+      "target": "linux-x64",
+      "sha512": "3900691e1f35223f647dd3eb4da067e5e3949497a62c4ee2bcde7d13f37cce1e08bd7285bd049d87e0674d36e18fdefc0366b554d9e36faff23f01972fb689ad",
+      "size": 120,
+      "executable": false,
+      "blob": "v11/files/39/3900691e1f35223f647dd3eb4da067e5e3949497a62c4ee2bcde7d13f37cce1e08bd7285bd049d87e0674d36e18fdefc0366b554d9e36faff23f01972fb689ad",
+      "url": "https://github.com/awesome-os/skia/releases/download/skia-cas-20261124/libskia-linux-x64.so.sha256",
+      "dependencies": []
+    }
+  ]
+}
