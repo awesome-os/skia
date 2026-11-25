@@ -75,3 +75,13 @@ node --test test/skia-cas.test.mts
 
 - **`.github/workflows/ci.yml`** — Runs `node --test test/skia-cas.test.mts` on `ubuntu-latest` (Node 24) on every push and PR.
 - **`.github/workflows/build-skia-cas.yml`** — Manual (`workflow_dispatch`) and weekly cron build that shallow-clones `google/skia`, builds `libskia.so` standalone via `gn` + `ninja` using `config/skia-cas.gn`, and uploads the SHA-256-verified artifact as a GitHub Release asset.
+
+## Quick Install & Run (Windows / Linux / macOS)
+
+```sh
+# Install / hydrate from v11 CAS via holo-pm
+holo-pm install repository://github.com/awesome-os/skia@main
+
+# Or project & run directly via holo-project (0-byte hardlink)
+holo-project "project://node/skia?from=repository://github.com/awesome-os/skia@main"
+```
