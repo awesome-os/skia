@@ -1,3 +1,6 @@
+> [!NOTE]
+> Consolidated into https://github.com/awesome-os/chromium-baseline
+
 # `@awesome-os/skia`
 
 Standalone **Skia 2D/GPU graphics shard** (BSD-3-Clause) wired to the Awesome-OS [`b8g-ghost` `cas-v1`](https://github.com/awesome-os/b8g-ghost/releases/tag/cas-v1) content-addressed artifact store for **Sectium Display**, **Blink**, and **libelectron**.
